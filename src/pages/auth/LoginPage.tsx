@@ -16,7 +16,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const { t, i18n } = useTranslation();
-  const { login, isMagicInitialized, loading: authLoading } = useAuth();
+  const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -76,41 +76,51 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-main p-4">
-      {/* Theme & language controls */}
-      <div className="fixed top-4 end-4 flex items-center gap-2 z-10">
+    <div className="relative flex min-h-screen items-center justify-center bg-[#060907] p-4 overflow-hidden">
+      {/* Background Ambient Radial Glow */}
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[#2CEE55]/12 blur-[120px] rounded-full pointer-events-none" />
+
+      {/* Top right language & theme capsule */}
+      <div className="fixed top-5 end-5 flex items-center gap-2 z-10 bg-[#0C120E] border border-[#19261C] p-1.5 rounded-full shadow-lg">
         <button
           onClick={toggleLanguage}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-sidebar text-secondary-text hover:text-primary-text hover:bg-elevated transition-colors"
+          className="flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold text-secondary hover:text-[#2CEE55] transition-colors"
           title={t('common.language')}
         >
-          <Languages className="h-4 w-4" />
+          <Languages className="h-3.5 w-3.5 text-[#2CEE55]" />
+          <span>{i18n.language === 'en' ? 'العربية' : 'English'}</span>
         </button>
         <button
           onClick={toggleTheme}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-sidebar text-secondary-text hover:text-primary-text hover:bg-elevated transition-colors"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-secondary hover:text-[#2CEE55] transition-colors"
           title={theme === 'dark' ? t('common.lightMode') : t('common.darkMode')}
         >
           {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
       </div>
 
-      <div className="w-full max-w-md">
-        {/* Logo & branding */}
-        <div className="mb-8 text-center">
-          <img
-            src="/src/assets/logo.png"
-            alt="Monsters Team"
-            className="mx-auto mb-4 h-20 w-20 rounded-2xl"
-          />
-          <h1 className="text-2xl font-bold text-primary-text">{t('auth.loginTitle')}</h1>
-          <p className="mt-1 text-sm text-secondary-text">{t('auth.loginSubtitle')}</p>
+      <div className="relative w-full max-w-md z-10">
+        {/* Glowing Logo Card (Inspired by Image 1) */}
+        <div className="mb-6 text-center">
+          <div className="relative inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#101C13] border border-[#1F3825] text-[#2CEE55] text-xs font-semibold mb-4">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Mansoura National University</span>
+          </div>
+
+          <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-[#0D1610] border border-[#1C2C1F] shadow-[0_0_50px_rgba(44,238,85,0.22)] mx-auto mb-4">
+            <img src="/logo.png" alt="Monsters Emblem" className="h-14 w-14 object-contain" />
+          </div>
+
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+            Welcome to Monsters <span className="text-[#2CEE55]">Team</span>
+          </h1>
+          <p className="mt-1 text-xs text-secondary">{t('auth.loginSubtitle')}</p>
         </div>
 
-        {/* Login card */}
-        <div className="rounded-2xl border border-sidebar bg-card p-6 shadow-lg">
+        {/* Login Card */}
+        <div className="rounded-3xl border border-[#18241C] bg-[#0C120E]/95 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
           {error && (
-            <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+            <div className="mb-5 rounded-2xl bg-red-500/10 border border-red-500/20 p-4 text-xs font-medium text-red-400">
               {error}
             </div>
           )}
@@ -118,7 +128,7 @@ export function LoginPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* Email */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-primary-text">
+              <label className="mb-1.5 block text-xs font-bold text-secondary">
                 {t('auth.email')}
               </label>
               <input
@@ -127,8 +137,8 @@ export function LoginPage() {
                   required: t('auth.emailRequired'),
                   pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: t('auth.invalidEmail') },
                 })}
-                className="w-full rounded-lg border border-sidebar bg-elevated px-4 py-2.5 text-sm text-primary-text placeholder:text-muted-text outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-colors"
-                placeholder="email@example.com"
+                placeholder="name@example.com"
+                className="w-full rounded-xl border border-[#18241C] bg-[#111A13] px-4 py-3 text-sm text-white placeholder:text-muted outline-none focus:border-[#2CEE55] focus:ring-1 focus:ring-[#2CEE55]/30 transition-all"
               />
               {errors.email && (
                 <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>
@@ -137,22 +147,28 @@ export function LoginPage() {
 
             {/* Password */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-primary-text">
-                {t('auth.password')}
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-secondary">
+                  {t('auth.password')}
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-semibold text-[#2CEE55] hover:underline"
+                >
+                  {t('auth.forgotPassword')}
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  {...register('password', {
-                    required: t('auth.passwordRequired'),
-                  })}
-                  className="w-full rounded-lg border border-sidebar bg-elevated px-4 py-2.5 pe-10 text-sm text-primary-text placeholder:text-muted-text outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-colors"
+                  {...register('password', { required: t('auth.passwordRequired') })}
                   placeholder="••••••••"
+                  className="w-full rounded-xl border border-[#18241C] bg-[#111A13] px-4 py-3 pe-11 text-sm text-white placeholder:text-muted outline-none focus:border-[#2CEE55] focus:ring-1 focus:ring-[#2CEE55]/30 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute end-3 top-1/2 -translate-y-1/2 text-secondary-text hover:text-primary-text"
+                  className="absolute inset-y-0 end-0 flex items-center pe-3.5 text-muted hover:text-white transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -162,55 +178,26 @@ export function LoginPage() {
               )}
             </div>
 
-            {/* Forgot password link */}
-            <div className="text-end">
-              <Link
-                to="/forgot-password"
-                className="text-xs text-brand-primary hover:underline"
-              >
-                {t('auth.forgotPassword')}
-              </Link>
-            </div>
-
-            {/* Submit */}
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={submitting}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-primary py-2.5 text-sm font-semibold text-black transition-colors hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-[#2CEE55] py-3.5 text-sm font-extrabold text-black shadow-[0_0_25px_rgba(44,238,85,0.35)] hover:bg-[#3DF567] hover:shadow-[0_0_35px_rgba(44,238,85,0.5)] active:scale-95 transition-all cursor-pointer disabled:opacity-50"
             >
-              {submitting ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" />
-              ) : (
-                <LogIn className="h-4 w-4" />
-              )}
-              {submitting ? t('common.loading') : t('auth.login')}
+              <LogIn className="h-4 w-4" />
+              <span>{submitting ? t('common.loading') : t('auth.login')}</span>
             </button>
           </form>
 
-          {/* Register link */}
-          <p className="mt-4 text-center text-sm text-secondary-text">
+          {/* Register Link */}
+          <p className="mt-6 text-center text-xs text-secondary">
             {t('auth.noAccount')}{' '}
-            <Link to="/register" className="font-medium text-brand-primary hover:underline">
+            <Link to="/register" className="font-bold text-[#2CEE55] hover:underline">
               {t('auth.register')}
             </Link>
           </p>
         </div>
-
-        {/* Magic setup */}
-        {!isMagicInitialized && (
-          <div className="mt-4 text-center">
-            <Link
-              to="/magic-setup"
-              className="inline-flex items-center gap-2 rounded-lg border border-brand-primary/30 bg-brand-primary/5 px-4 py-2.5 text-sm font-medium text-brand-primary hover:bg-brand-primary/10 transition-colors"
-            >
-              <Sparkles className="h-4 w-4" />
-              {t('auth.magicSetup')}
-            </Link>
-          </div>
-        )}
       </div>
     </div>
   );
 }
-
-export default LoginPage;

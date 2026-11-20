@@ -3,7 +3,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
 import type { UserRole } from '@/types';
 import { ROLE_DISPLAY } from '@/types';
 import {
@@ -21,12 +20,10 @@ import {
   Settings,
   Archive,
   PlusCircle,
-  ClipboardCheck,
-  UserCircle,
+  Award,
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  LogOut,
 } from 'lucide-react';
 
 interface NavItem {
@@ -70,7 +67,6 @@ function getNavItems(role: UserRole, t: (key: string) => string): NavItem[] {
     case 'leader':
       return [
         { label: t('nav.dashboard'), path: '/dashboard', icon: LayoutDashboard },
-        { label: t('nav.members'), path: '/members', icon: Users },
         { label: t('nav.createTask'), path: '/create-task', icon: PlusCircle },
         { label: t('nav.tasks'), path: '/tasks', icon: ClipboardList },
         { label: t('nav.submissions'), path: '/submissions', icon: FileText },
@@ -82,7 +78,7 @@ function getNavItems(role: UserRole, t: (key: string) => string): NavItem[] {
     case 'hr_member':
       return [
         { label: t('nav.dashboard'), path: '/dashboard', icon: LayoutDashboard },
-        { label: t('nav.evaluationQueue'), path: '/evaluation-queue', icon: ClipboardCheck },
+        { label: t('nav.evaluationQueue'), path: '/evaluation-queue', icon: Award },
         { label: t('nav.submissions'), path: '/submissions', icon: FileText },
         { label: t('nav.performance'), path: '/performance', icon: Star },
         { label: t('nav.leaderboards'), path: '/leaderboards', icon: Trophy },
@@ -90,16 +86,15 @@ function getNavItems(role: UserRole, t: (key: string) => string): NavItem[] {
         { label: t('nav.analytics'), path: '/analytics', icon: BarChart3 },
       ];
     case 'member':
+    default:
       return [
         { label: t('nav.dashboard'), path: '/dashboard', icon: LayoutDashboard },
         { label: t('nav.myTasks'), path: '/my-tasks', icon: ClipboardList },
         { label: t('nav.myEvaluations'), path: '/my-evaluations', icon: Star },
-        { label: t('nav.myPerformance'), path: '/my-performance', icon: BarChart3 },
+        { label: t('nav.myPerformance'), path: '/my-performance', icon: Trophy },
         { label: t('nav.leaderboard'), path: '/leaderboard', icon: Trophy },
         { label: t('nav.myAttendance'), path: '/my-attendance', icon: CalendarCheck },
       ];
-    default:
-      return [];
   }
 }
 
@@ -110,131 +105,86 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
   const { t, i18n } = useTranslation();
-  const { userProfile, logout } = useAuth();
-  const { theme } = useTheme();
-  const location = useLocation();
+  const { userProfile } = useAuth();
   const isRTL = i18n.language === 'ar';
 
-  const navItems = userProfile ? getNavItems(userProfile.role, t) : [];
-
-  const roleDisplay = userProfile
-    ? isRTL
-      ? ROLE_DISPLAY[userProfile.role].ar
-      : ROLE_DISPLAY[userProfile.role].en
-    : '';
+  const role = userProfile?.role || 'member';
+  const navItems = getNavItems(role, t);
 
   return (
     <aside
       className={cn(
-        'fixed top-0 bottom-0 z-40 flex flex-col border-sidebar bg-sidebar transition-all duration-300',
+        'fixed top-0 z-40 flex h-screen flex-col border-[#18241C] bg-[#070B08] transition-all duration-300 shadow-2xl',
         isRTL ? 'right-0 border-l' : 'left-0 border-r',
-        collapsed ? 'w-[68px]' : 'w-64'
+        collapsed ? 'w-[72px]' : 'w-64'
       )}
     >
-      {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-sidebar px-4">
-        <img
-          src="/src/assets/logo.png"
-          alt="Monsters"
-          className="h-9 w-9 flex-shrink-0 rounded-lg"
-        />
+      {/* Sidebar Header */}
+      <div className="flex h-20 items-center justify-between px-4 border-b border-[#18241C]">
         {!collapsed && (
-          <span className="text-lg font-bold tracking-tight text-primary-text whitespace-nowrap">
-            {t('app.name')}
-          </span>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0E1610] border border-[#1A281D] shadow-[0_0_15px_rgba(44,238,85,0.25)]">
+              <img src="/logo.png" alt="Logo" className="h-5 w-5 object-contain" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-white tracking-wider">MONSTERS</p>
+              <p className="text-[10px] font-bold text-[#2CEE55] tracking-widest uppercase">
+                {isRTL ? ROLE_DISPLAY[role]?.ar : ROLE_DISPLAY[role]?.en}
+              </p>
+            </div>
+          </div>
         )}
+        {collapsed && (
+          <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-[#0E1610] border border-[#1A281D]">
+            <img src="/logo.png" alt="Logo" className="h-5 w-5 object-contain" />
+          </div>
+        )}
+
+        <button
+          onClick={onToggleCollapse}
+          className="hidden md:flex h-7 w-7 items-center justify-center rounded-lg border border-[#1A281D] bg-[#0C120E] text-secondary hover:text-[#2CEE55] hover:border-[#2CEE55] transition-colors"
+        >
+          {isRTL ? (
+            collapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
+          ) : (
+            collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />
+          )}
+        </button>
       </div>
 
-      {/* Nav items */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2">
-        <ul className="space-y-1">
-          {navItems.map((item) => {
-            const isActive =
-              location.pathname === item.path ||
-              (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
-            return (
-              <li key={item.path}>
-                <NavLink
-                  to={item.path}
-                  title={collapsed ? item.label : undefined}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-brand-primary/15 text-brand-primary'
-                      : 'text-secondary-text hover:bg-elevated hover:text-primary-text'
-                  )}
-                >
-                  <item.icon
-                    className={cn(
-                      'h-5 w-5 flex-shrink-0',
-                      isActive ? 'text-brand-primary' : 'text-secondary-text'
-                    )}
-                  />
-                  {!collapsed && <span className="truncate">{item.label}</span>}
-                </NavLink>
-              </li>
-            );
-          })}
-        </ul>
+      {/* Nav List */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                cn(
+                  'group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all duration-200',
+                  isActive
+                    ? 'bg-[#2CEE55] text-black font-bold shadow-[0_0_20px_rgba(44,238,85,0.35)] scale-[1.02]'
+                    : 'text-[#9AA69C] hover:bg-[#0E1711] hover:text-[#2CEE55] hover:border hover:border-[#1E3023]'
+                )
+              }
+            >
+              <Icon className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110" />
+              {!collapsed && <span className="truncate">{item.label}</span>}
+            </NavLink>
+          );
+        })}
       </nav>
 
-      {/* Collapse toggle */}
-      <button
-        onClick={onToggleCollapse}
-        className={cn(
-          'absolute top-20 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-sidebar bg-card text-secondary-text shadow-sm transition-colors hover:text-primary-text',
-          isRTL ? '-left-3' : '-right-3'
-        )}
-      >
-        {collapsed ? (
-          isRTL ? (
-            <ChevronLeft className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5" />
-          )
-        ) : isRTL ? (
-          <ChevronRight className="h-3.5 w-3.5" />
-        ) : (
-          <ChevronLeft className="h-3.5 w-3.5" />
-        )}
-      </button>
-
-      {/* User info */}
-      {userProfile && (
-        <div className="border-t border-sidebar p-3">
-          <div
-            className={cn(
-              'flex items-center gap-3',
-              collapsed && 'justify-center'
-            )}
-          >
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary/20 text-brand-primary text-sm font-semibold uppercase">
-              {userProfile.fullName?.charAt(0) || 'U'}
-            </div>
-            {!collapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="truncate text-sm font-medium text-primary-text">
-                  {userProfile.fullName}
-                </p>
-                <p className="truncate text-xs text-secondary-text">
-                  {roleDisplay}
-                </p>
-              </div>
-            )}
-            {!collapsed && (
-              <button
-                onClick={() => logout()}
-                title={t('auth.logout')}
-                className="flex-shrink-0 text-secondary-text hover:text-red-400 transition-colors"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            )}
+      {/* Footer Info */}
+      {!collapsed && (
+        <div className="p-4 border-t border-[#18241C] bg-[#080D0A]">
+          <div className="flex items-center gap-2 text-xs text-[#2CEE55] font-semibold">
+            <span className="h-2 w-2 rounded-full bg-[#2CEE55] shadow-[0_0_8px_#2CEE55] animate-pulse" />
+            <span>Monsters MNU Portal</span>
           </div>
         </div>
       )}
     </aside>
   );
 }
-
-export default Sidebar;
