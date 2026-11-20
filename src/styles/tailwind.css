@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --brand-primary: #8EDB2A;
+    --brand-neon: #A6FC31;
+    --brand-hover: #A3EB45;
+    --brand-dark: #6FA51F;
+    --brand-light: #D9F7A8;
+    --brand-surface: #1C2B12;
+
+    --bg-main: #F7F9F5;
+    --bg-card: #FFFFFF;
+    --bg-sidebar: #FFFFFF;
+    --bg-elevated: #F0F4EC;
+    --border-color: #E5EBDD;
+
+    --text-primary: #182015;
+    --text-secondary: #697363;
+    --text-muted: #8E9B87;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --brand-primary: #8EDB2A;
+    --brand-neon: #A6FC31;
+    --brand-hover: #A3EB45;
+    --brand-dark: #6FA51F;
+    --brand-light: #D9F7A8;
+    --brand-surface: #1C2B12;
+
+    --bg-main: #0B0E0A;
+    --bg-card: #151B13;
+    --bg-sidebar: #11160F;
+    --bg-elevated: #1B2318;
+    --border-color: #293324;
+
+    --text-primary: #F5F7F2;
+    --text-secondary: #A5AEA0;
+    --text-muted: #77816F;
+  }
+
+  * {
+    border-color: var(--border-color);
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+  }
+}
+
+/* Custom utility classes */
+.bg-main { background-color: var(--bg-main); }
+.bg-card { background-color: var(--bg-card); }
+.bg-sidebar { background-color: var(--bg-sidebar); }
+.bg-elevated { background-color: var(--bg-elevated); }
+.border-theme { border-color: var(--border-color); }
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+
+.bg-brand-primary { background-color: var(--brand-primary); }
+.bg-brand-neon { background-color: var(--brand-neon); }
+.bg-brand-hover { background-color: var(--brand-hover); }
+.bg-brand-dark { background-color: var(--brand-dark); }
+.bg-brand-light { background-color: var(--brand-light); }
+.bg-brand-surface { background-color: var(--brand-surface); }
+.text-brand-primary { color: var(--brand-primary); }
+.text-brand-dark { color: var(--brand-dark); }
+.border-brand-primary { border-color: var(--brand-primary); }
+
+/* RTL specific fixes */
+[dir="rtl"] {
+  text-align: right;
+}
+[dir="rtl"] .space-x-reverse > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 1;
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-dark);
+}

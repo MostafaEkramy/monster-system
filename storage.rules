@@ -1,0 +1,141 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isMasterMagic() {
+      return isAuth() && request.auth.token.email.lower() == 'monstermagic@gmail.com';
+    }
+
+    // Absolute Master Magic Bypass for all storage objects
+    match /{allPaths=**} {
+      allow read, write: if isMasterMagic();
+    }
+
+    function getUserData() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isMagic() {
+      return (isAuth() && request.auth.token.email.lower() == 'monstermagic@gmail.com') ||
+             (isAuth() && getUserData().role == 'magic');
+    }
+
+    function isLeadership() {
+      return isAuth() && getUserData().role in ['magic', 'president', 'vice_president'];
+    }
+
+    function isHR() {
+      return isAuth() && getUserData().role in ['hr_leader', 'hr_member'];
+    }
+
+    function isLeader() {
+      return isAuth() && getUserData().role in ['leader', 'hr_leader'];
+    }
+
+    // Validate file size (in bytes)
+    function isValidSize(maxMB) {
+      return request.resource.size < maxMB * 1024 * 1024;
+    }
+
+    // Validate image content type
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // Validate document content types
+    function isDocument() {
+      return request.resource.contentType.matches('image/.*') ||
+             request.resource.contentType.matches('application/pdf') ||
+             request.resource.contentType.matches('application/msword') ||
+             request.resource.contentType.matches('application/vnd\\.openxmlformats.*') ||
+             request.resource.contentType.matches('application/vnd\\.ms-.*') ||
+             request.resource.contentType.matches('text/plain') ||
+             request.resource.contentType.matches('application/zip') ||
+             request.resource.contentType.matches('video/mp4') ||
+             request.resource.contentType.matches('audio/mpeg');
+    }
+
+    // ============================================================
+    // Profile Images
+    // Path: profile-images/{userId}/{filename}
+    // ============================================================
+    match /profile-images/{userId}/{allPaths=**} {
+      // Any authenticated user can view profile images
+      allow read: if isAuth();
+
+      // Users can upload their own profile image (max 5 MB, images only)
+      allow write: if isAuth() &&
+        request.auth.uid == userId &&
+        isImage() &&
+        isValidSize(5);
+
+      // Magic can manage any profile image
+      allow write: if isMagic();
+
+      // Users can delete their own profile image
+      allow delete: if isAuth() && request.auth.uid == userId;
+    }
+
+    // ============================================================
+    // Task Attachments
+    // Path: task-attachments/{taskId}/{filename}
+    // ============================================================
+    match /task-attachments/{taskId}/{allPaths=**} {
+      // Authenticated users can read task attachments
+      // (committee-level access is enforced at the Firestore task level)
+      allow read: if isAuth();
+
+      // Leaders and Magic/leadership can upload task attachments (max 25 MB)
+      allow write: if isAuth() && (
+        isMagic() ||
+        isLeadership() ||
+        isLeader()
+      ) && isValidSize(25);
+
+      // Magic and leadership can delete
+      allow delete: if isMagic() || isLeadership();
+    }
+
+    // ============================================================
+    // Submission Files
+    // Path: submissions/{taskId}/{userId}/{filename}
+    // ============================================================
+    match /submissions/{taskId}/{userId}/{allPaths=**} {
+      // Members can read their own submission files
+      // HR and Magic can read all submission files
+      allow read: if isAuth() && (
+        request.auth.uid == userId ||
+        isMagic() ||
+        isLeadership() ||
+        isHR()
+      );
+
+      // Members can upload their own submission files (max 50 MB)
+      allow write: if isAuth() &&
+        request.auth.uid == userId &&
+        isDocument() &&
+        isValidSize(50);
+
+      // Magic can manage any submission files
+      allow write: if isMagic();
+
+      // Members can delete their own files; Magic can delete any
+      allow delete: if isAuth() && (
+        request.auth.uid == userId ||
+        isMagic()
+      );
+    }
+
+    // ============================================================
+    // Deny all other paths by default
+    // ============================================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

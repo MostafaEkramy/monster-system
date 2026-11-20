@@ -1,0 +1,391 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // Master Magic Bypass
+    // ============================================================
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isMasterMagic() {
+      return isAuth() && request.auth.token.email.lower() == 'monstermagic@gmail.com';
+    }
+
+    // Absolute Master Magic Bypass for all documents and collections
+    match /{document=**} {
+      allow read, write: if isMasterMagic();
+    }
+
+    // Get the current user's profile document
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Check if the user has a specific role
+    function hasRole(role) {
+      return isAuth() && getUserData().role == role;
+    }
+
+    // Check if the user has any of the given roles
+    function hasAnyRole(roles) {
+      return isAuth() && getUserData().role in roles;
+    }
+
+    // Check if the user is the Magic admin
+    function isMagic() {
+      return (isAuth() && request.auth.token.email.lower() == 'monstermagic@gmail.com') ||
+             hasRole('magic');
+    }
+
+    // Check if the user is in the leadership team
+    function isLeadership() {
+      return hasAnyRole(['magic', 'president', 'vice_president']);
+    }
+
+    // Check if the user is an HR member or leader
+    function isHR() {
+      return hasAnyRole(['hr_leader', 'hr_member']);
+    }
+
+    // Check if the user is a committee leader
+    function isLeader() {
+      return hasAnyRole(['leader', 'hr_leader']);
+    }
+
+    // Check if the user's account is approved
+    function isApproved() {
+      return isAuth() && getUserData().status == 'approved';
+    }
+
+    // Check if user belongs to a specific committee
+    function isInCommittee(committee) {
+      return isAuth() && getUserData().committee == committee;
+    }
+
+    // Validate required string fields
+    function isNonEmptyString(field) {
+      return field is string && field.size() > 0;
+    }
+
+    // Validate timestamp field
+    function isTimestamp(field) {
+      return field is timestamp;
+    }
+
+    // ============================================================
+    // Users Collection
+    // ============================================================
+    match /users/{userId} {
+      // Users can read their own profile
+      // Magic can read all profiles
+      // Approved users can read profiles of members in their committee
+      allow read: if isAuth() && (
+        request.auth.uid == userId ||
+        isMagic() ||
+        isLeadership() ||
+        (isApproved() && resource.data.committee == getUserData().committee)
+      );
+
+      // Users can create their own profile during registration
+      allow create: if isAuth() && request.auth.uid == userId &&
+        isNonEmptyString(request.resource.data.fullName) &&
+        isNonEmptyString(request.resource.data.email) &&
+        request.resource.data.status == 'pending';
+
+      // Users can update their own non-sensitive fields
+      // Magic/leadership can update any user
+      allow update: if isAuth() && (
+        // Own profile: limited fields
+        (request.auth.uid == userId &&
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['role', 'status', 'currentSeasonPoints', 'currentSeasonRank'])) ||
+        // Magic/leadership: full update
+        isLeadership() ||
+        // HR can approve/reject and change committees
+        (isHR() && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'committee', 'role', 'updatedAt']))
+      );
+
+      // Only Magic can delete users
+      allow delete: if isMagic();
+    }
+
+    // ============================================================
+    // Committees Collection
+    // ============================================================
+    match /committees/{committeeId} {
+      // All authenticated users can read committees
+      allow read: if isAuth();
+
+      // Only Magic can create/update/delete committees
+      allow create, update, delete: if isMagic();
+    }
+
+    // ============================================================
+    // Tasks Collection
+    // ============================================================
+    match /tasks/{taskId} {
+      // Magic and leadership can read all tasks
+      // Leaders can read tasks from their committee
+      // Members can read tasks assigned to them or their committee
+      allow read: if isAuth() && (
+        isLeadership() ||
+        isMagic() ||
+        (isApproved() && resource.data.committee == getUserData().committee)
+      );
+
+      // Leaders can create tasks for their committee; Magic/leadership can create any
+      allow create: if isAuth() && (
+        isLeadership() ||
+        isMagic() ||
+        (isLeader() && request.resource.data.committee == getUserData().committee)
+      );
+
+      // Leaders can update their committee's tasks; Magic/leadership can update any
+      allow update: if isAuth() && (
+        isLeadership() ||
+        isMagic() ||
+        (isLeader() && resource.data.committee == getUserData().committee)
+      );
+
+      // Only Magic can delete tasks
+      allow delete: if isMagic() || isLeadership();
+    }
+
+    // ============================================================
+    // Task Assignments Collection
+    // ============================================================
+    match /taskAssignments/{assignmentId} {
+      // Users can read their own assignments
+      // Leaders can read assignments in their committee
+      // Magic/leadership can read all
+      allow read: if isAuth() && (
+        resource.data.userId == request.auth.uid ||
+        isLeadership() ||
+        isMagic() ||
+        (isLeader() && resource.data.committee == getUserData().committee)
+      );
+
+      // Leaders and Magic/leadership can create
+      allow create: if isAuth() && (
+        isLeadership() ||
+        isMagic() ||
+        (isLeader() && request.resource.data.committee == getUserData().committee)
+      );
+
+      // Assigned user can update status; leaders/Magic can update any
+      allow update: if isAuth() && (
+        resource.data.userId == request.auth.uid ||
+        isLeadership() ||
+        isMagic() ||
+        (isLeader() && resource.data.committee == getUserData().committee)
+      );
+
+      allow delete: if isMagic() || isLeadership();
+    }
+
+    // ============================================================
+    // Submissions Collection
+    // ============================================================
+    match /submissions/{submissionId} {
+      // Users can read their own submissions
+      // HR and Magic can read all submissions
+      // Leaders can read submissions from their committee
+      allow read: if isAuth() && (
+        resource.data.userId == request.auth.uid ||
+        isMagic() ||
+        isLeadership() ||
+        isHR() ||
+        (isLeader() && resource.data.committee == getUserData().committee)
+      );
+
+      // Members can create their own submissions
+      allow create: if isAuth() &&
+        request.resource.data.userId == request.auth.uid &&
+        isApproved() &&
+        isNonEmptyString(request.resource.data.taskId) &&
+        request.resource.data.isLocked == false;
+
+      // Members can update their own non-locked submissions
+      allow update: if isAuth() && (
+        // Own submission, not locked
+        (resource.data.userId == request.auth.uid &&
+          resource.data.isLocked == false &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isLocked'])) ||
+        // HR/Magic can lock submissions
+        isMagic() ||
+        isLeadership() ||
+        isHR()
+      );
+
+      allow delete: if isMagic();
+    }
+
+    // ============================================================
+    // Evaluations Collection
+    // ============================================================
+    match /evaluations/{evaluationId} {
+      // Users can read their own evaluations
+      // HR and Magic have full read access
+      allow read: if isAuth() && (
+        resource.data.userId == request.auth.uid ||
+        isMagic() ||
+        isLeadership() ||
+        isHR()
+      );
+
+      // HR members and Magic/leadership can create evaluations
+      allow create: if isAuth() && (
+        isMagic() ||
+        isLeadership() ||
+        isHR()
+      ) &&
+        isNonEmptyString(request.resource.data.taskId) &&
+        isNonEmptyString(request.resource.data.submissionId) &&
+        request.resource.data.awardedPoints is number &&
+        request.resource.data.awardedPoints >= 0;
+
+      // HR and Magic can update evaluations (non-finalized only via app logic)
+      allow update: if isAuth() && (
+        isMagic() ||
+        isLeadership() ||
+        isHR()
+      );
+
+      allow delete: if isMagic();
+    }
+
+    // ============================================================
+    // Attendance Sessions Collection
+    // ============================================================
+    match /attendanceSessions/{sessionId} {
+      // All approved users can read attendance sessions
+      allow read: if isAuth() && isApproved();
+
+      // HR, leaders (for their committee), and Magic can create sessions
+      allow create: if isAuth() && (
+        isMagic() ||
+        isLeadership() ||
+        isHR() ||
+        (isLeader() && request.resource.data.committee == getUserData().committee)
+      );
+
+      // HR, leaders, and Magic can update sessions
+      allow update: if isAuth() && (
+        isMagic() ||
+        isLeadership() ||
+        isHR() ||
+        (isLeader() && resource.data.committee == getUserData().committee)
+      );
+
+      allow delete: if isMagic();
+    }
+
+    // ============================================================
+    // Attendance Records Collection
+    // ============================================================
+    match /attendanceRecords/{recordId} {
+      // Users can read their own attendance records
+      // HR, leaders (of their committee), and Magic can read all
+      allow read: if isAuth() && (
+        resource.data.userId == request.auth.uid ||
+        isMagic() ||
+        isLeadership() ||
+        isHR() ||
+        (isLeader() && resource.data.committee == getUserData().committee)
+      );
+
+      // HR, leaders (for their committee), and Magic can create records
+      allow create: if isAuth() && (
+        isMagic() ||
+        isLeadership() ||
+        isHR() ||
+        (isLeader() && request.resource.data.committee == getUserData().committee)
+      );
+
+      // HR, leaders, and Magic can update records
+      allow update: if isAuth() && (
+        isMagic() ||
+        isLeadership() ||
+        isHR() ||
+        (isLeader() && resource.data.committee == getUserData().committee)
+      );
+
+      allow delete: if isMagic();
+    }
+
+    // ============================================================
+    // Seasons Collection
+    // ============================================================
+    match /seasons/{seasonId} {
+      // All authenticated users can read seasons
+      allow read: if isAuth();
+
+      // Only Magic can manage seasons
+      allow create, update, delete: if isMagic() || isLeadership();
+    }
+
+    // ============================================================
+    // Notifications Collection
+    // ============================================================
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+
+      // System creates notifications (via admin SDK or Magic)
+      // Users can create notifications targeted to themselves (for edge cases)
+      allow create: if isAuth() && (
+        isMagic() ||
+        isLeadership() ||
+        isHR() ||
+        isLeader()
+      );
+
+      // Users can update their own notifications (mark as read)
+      allow update: if isAuth() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+
+    // ============================================================
+    // Activity Logs Collection
+    // ============================================================
+    match /activityLogs/{logId} {
+      // Magic and leadership can read all logs
+      // Leaders can read logs for their committee
+      // HR can read all logs
+      allow read: if isAuth() && (
+        isMagic() ||
+        isLeadership() ||
+        isHR() ||
+        (isLeader() && resource.data.committeeId == getUserData().committee)
+      );
+
+      // Any authenticated user can create logs (actions are logged by the app)
+      allow create: if isAuth() &&
+        isNonEmptyString(request.resource.data.actorId) &&
+        isNonEmptyString(request.resource.data.action);
+
+      // Logs are immutable
+      allow update, delete: if false;
+    }
+
+    // ============================================================
+    // System Settings Collection
+    // ============================================================
+    match /systemSettings/{settingId} {
+      // All authenticated users can read system settings
+      allow read: if isAuth();
+
+      // Only Magic can write system settings
+      allow create, update: if isMagic();
+
+      allow delete: if false;
+    }
+  }
+}
