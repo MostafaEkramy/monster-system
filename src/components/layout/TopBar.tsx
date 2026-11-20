@@ -14,7 +14,6 @@ import {
   LogOut,
   Menu,
   ChevronDown,
-  Sparkles,
   Shield,
   GraduationCap,
 } from 'lucide-react';
@@ -59,18 +58,6 @@ export function TopBar({ onMenuClick }: TopBarProps) {
     navigate('/login');
   };
 
-  // Main quick navigation capsule matching Image 1
-  const quickNav = [
-    { label: isRTL ? 'الرئيسية' : 'Home', path: '/dashboard' },
-    { label: isRTL ? 'مجلس الإدارة' : 'Our Board', path: '/users' },
-    { label: isRTL ? 'اللجان' : 'Committees', path: '/committees' },
-    { label: isRTL ? 'الفعاليات' : 'Events', path: userProfile?.role === 'member' ? '/my-tasks' : '/tasks' },
-    { label: isRTL ? 'المسابقات' : 'Competitions', path: '/leaderboard' },
-    { label: isRTL ? 'الرحلات' : 'Trips', path: userProfile?.role === 'member' ? '/my-attendance' : '/attendance' },
-    { label: isRTL ? 'الأعضاء' : 'Members', path: userProfile?.role === 'magic' ? '/pending-registrations' : '/users' },
-    { label: isRTL ? 'الإعدادات' : 'Contact', path: '/settings' },
-  ];
-
   return (
     <header className="sticky top-0 z-30 flex h-20 items-center justify-between gap-4 border-b border-[#18241C] bg-[#070B08]/90 backdrop-blur-xl px-4 md:px-8 transition-colors">
       {/* Left: Mobile trigger & Monsters Brand + University Badges */}
@@ -93,7 +80,7 @@ export function TopBar({ onMenuClick }: TopBarProps) {
               MONSTERS
             </span>
 
-            {/* University & Faculty Badges from Image 1 */}
+            {/* University & Faculty Badges */}
             <div className="hidden sm:flex items-center gap-1.5 ms-1">
               {/* MNU Badge */}
               <div
@@ -113,27 +100,6 @@ export function TopBar({ onMenuClick }: TopBarProps) {
           </div>
         </Link>
       </div>
-
-      {/* Middle: Floating Capsule Navbar from Image 1 */}
-      <nav className="hidden xl:flex items-center gap-1 bg-[#0C130E] border border-[#19261C] p-1.5 rounded-full shadow-inner">
-        {quickNav.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.label}
-              to={item.path}
-              className={cn(
-                'px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200',
-                isActive
-                  ? 'bg-[#2CEE55] text-black shadow-[0_0_20px_rgba(44,238,85,0.45)] font-bold'
-                  : 'text-[#9AA69C] hover:text-white hover:bg-[#121E15]'
-              )}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
 
       {/* Right Controls */}
       <div className="flex items-center gap-2.5">
